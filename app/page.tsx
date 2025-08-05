@@ -10,9 +10,9 @@ export default function HomePage() {
       <Header />
       
       {/* Hero Section */}
-      <section className="pt-32 pb-16">
+      <section className="pt-32 pb-8">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div className="text-center mb-8">
             <h1 className="text-5xl md:text-7xl font-serif font-light mb-6 tracking-wide">
               MOSÉ
             </h1>
@@ -21,7 +21,7 @@ export default function HomePage() {
             </p>
           </div>
           
-          <div className="flex flex-col md:flex-row gap-4 justify-center mb-16">
+          <div className="flex flex-col md:flex-row gap-4 justify-center mb-10">
             <ShopCollectionButton className="px-8 py-3 text-lg">
               SHOP COLLECTION
             </ShopCollectionButton>
@@ -39,13 +39,22 @@ export default function HomePage() {
       <section className="py-16 border-t border-neutral-800">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[1, 2, 3, 4].map((item) => (
-              <div key={item} className="group">
+            {[
+              { id: 1, image: "/u9499386881_African_art_and_handcrafted_gifts_from_talented_a_2cba438a-0a36-4d5b-b78a-cb10d524b2b4_0.png" },
+              { id: 2, image: "/u9499386881_African_art_and_handcrafted_gifts_from_talented_a_2cba438a-0a36-4d5b-b78a-cb10d524b2b4_1.png" },
+              { id: 3, image: "/u9499386881_African_art_and_handcrafted_gifts_from_talented_a_2cba438a-0a36-4d5b-b78a-cb10d524b2b4_2.png" },
+              { id: 4, image: "/u9499386881_African_art_and_handcrafted_gifts_from_talented_a_2cba438a-0a36-4d5b-b78a-cb10d524b2b4_3.png" }
+            ].map((item) => (
+              <div key={item.id} className="group">
                 <div className="aspect-square bg-background-secondary mb-4 relative overflow-hidden border border-neutral-800">
-                  <div className="absolute top-4 left-4 bg-accent text-text-primary px-2 py-1 text-sm font-medium">
+                  <div className="absolute top-4 left-4 bg-red-500 text-white px-2 py-1 text-sm font-medium z-10">
                     SALE
                   </div>
-                  <div className="w-full h-full bg-gradient-to-br from-background-tertiary to-background-secondary"></div>
+                  <img 
+                    src={item.image} 
+                    alt="African art and handcrafted gifts" 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
                 </div>
                 <h3 className="text-lg font-medium mb-2">African Mask Collection</h3>
                 <div className="flex items-center space-x-2">

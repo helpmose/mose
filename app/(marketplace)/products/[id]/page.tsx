@@ -34,7 +34,7 @@ function ProductDetailContent() {
       salePrice: 36000,
       category: "Masks",
       subcategory: "Traditional Masks",
-      images: [],
+      images: ["/u9499386881_Handcrafted_wooden_mask_from_West_Africa_with_int_738ba0b3-44b8-41ea-9d40-7420f5cb547d_0.png"],
       sellerId: "seller1",
       sellerName: "Adebayo Arts",
       status: "active",
@@ -64,7 +64,7 @@ function ProductDetailContent() {
       price: 75000,
       category: "Textiles",
       subcategory: "Kente Cloth",
-      images: [],
+      images: ["/u9499386881_Authentic_Ghanaian_Kente_cloth_with_traditional_p_57291fc6-852a-4a94-a047-66de0bc866b6_0.png"],
       sellerId: "seller2",
       sellerName: "Ghana Crafts",
       status: "active",
@@ -78,6 +78,37 @@ function ProductDetailContent() {
       rating: 4.9,
       reviewCount: 8,
       shares: 12,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      $id: "3",
+      title: "Bronze Sculpture",
+      description: "Contemporary African bronze sculpture by renowned artist. This exceptional piece showcases the fusion of traditional African artistry with modern sculptural techniques.\n\nCrafted by master sculptors using premium bronze, this sculpture represents the evolution of African art in the contemporary world. Each piece carries cultural significance while appealing to modern aesthetic sensibilities.\n\nPerfect for art collectors, galleries, or as a statement piece in sophisticated interiors.",
+      price: 120000,
+      salePrice: 96000,
+      category: "Sculptures",
+      subcategory: "Contemporary Sculptures",
+      images: ["/u9499386881_Contemporary_African_bronze_sculpture_by_renowned_a7632d19-a74f-4a7a-b24d-2637fa95c648_2.png"],
+      sellerId: "seller3",
+      sellerName: "Modern Africa Arts",
+      status: "active",
+      customizable: false,
+      stock: 1,
+      dimensions: {
+        width: 30,
+        height: 45,
+        depth: 20,
+        weight: 8.5
+      },
+      materials: ["Bronze", "Patina Finish", "Marble Base"],
+      tags: ["bronze", "sculpture", "contemporary", "art", "collectible"],
+      featured: true,
+      views: 200,
+      likes: 45,
+      rating: 5.0,
+      reviewCount: 6,
+      shares: 15,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
@@ -180,12 +211,21 @@ function ProductDetailContent() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Product Images */}
           <div className="space-y-4">
-            <div className="aspect-square bg-background-secondary rounded-lg overflow-hidden relative">
-              <div className="w-full h-full flex items-center justify-center">
-                <svg className="w-24 h-24 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
+            <div className="aspect-square bg-background-secondary rounded-lg overflow-hidden relative cursor-pointer" onClick={() => setShowImageModal(true)}>
+              {product.images && product.images.length > 0 ? (
+                <Image
+                  src={product.images[selectedImage]}
+                  alt={product.title}
+                  fill
+                  className="object-cover hover:scale-105 transition-transform duration-300"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <svg className="w-24 h-24 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              )}
               
               {product.salePrice && product.salePrice < product.price && (
                 <div className="absolute top-4 left-4 bg-red-500 text-white px-3 py-1 text-sm font-medium rounded">
@@ -359,10 +399,21 @@ function ProductDetailContent() {
                 onClick={() => router.push(`/products/${relatedProduct.$id}`)}
                 className="bg-background-secondary border border-neutral-800 rounded-lg p-4 hover:border-text-primary transition-colors text-left"
               >
-                <div className="aspect-square bg-background-tertiary rounded-lg mb-3 flex items-center justify-center">
-                  <svg className="w-12 h-12 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+                <div className="aspect-square bg-background-tertiary rounded-lg mb-3 overflow-hidden relative">
+                  {relatedProduct.images && relatedProduct.images.length > 0 ? (
+                    <Image
+                      src={relatedProduct.images[0]}
+                      alt={relatedProduct.title}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <svg className="w-12 h-12 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
                 <h3 className="font-medium mb-1 line-clamp-2">{relatedProduct.title}</h3>
                 <p className="text-text-primary font-semibold">
