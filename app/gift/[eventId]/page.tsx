@@ -1,13 +1,21 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Header from "@/components/layout/header";
 import { GiftService, GiftEvent, GiftContribution } from '@/lib/services/gifts';
-import { ProductService } from '@/lib/services/product';
+import { ProductService, Product } from '@/lib/services/product';
 import { useAuthStore } from '@/store/auth-store';
 import { useCartStore } from '@/store/cart-store';
 import { toast } from 'sonner';
+
+interface ContributionFormData {
+  amount: string;
+  message: string;
+  contributorName: string;
+  contributorEmail: string;
+  isAnonymous: boolean;
+}
 
 export default function GiftEventPage() {
   const params = useParams();
@@ -17,9 +25,9 @@ export default function GiftEventPage() {
 
   const [giftEvent, setGiftEvent] = useState<GiftEvent | null>(null);
   const [contributions, setContributions] = useState<GiftContribution[]>([]);
-  const [wishlistProducts, setWishlistProducts] = useState<any[]>([]);
+  const [wishlistProducts, setWishlistProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [contributionForm, setContributionForm] = useState({
+  const [contributionForm, setContributionForm] = useState<ContributionFormData>({
     amount: '',
     message: '',
     contributorName: '',
@@ -55,7 +63,7 @@ export default function GiftEventPage() {
             }
           })
         );
-        setWishlistProducts(products.filter(Boolean));
+        setWishlistProducts(products.filter((p): p is Product => p !== null));
       }
     } catch (error) {
       console.error('Error loading gift event:', error);
@@ -110,21 +118,36 @@ export default function GiftEventPage() {
     }).format(amount);
   };
 
-  const getProgressPercentage = () => {
+  // Memoized calculations for better performance
+  const progressPercentage = useMemo(() => {
     if (!giftEvent || !giftEvent.giftGoal) return 0;
     return Math.min(((giftEvent.currentAmount || 0) / giftEvent.giftGoal) * 100, 100);
-  };
+  }, [giftEvent?.currentAmount, giftEvent?.giftGoal]);
 
-  const getDaysUntilEvent = () => {
+  const daysUntilEvent = useMemo(() => {
     if (!giftEvent) return 0;
     const eventDate = new Date(giftEvent.eventDate);
     const today = new Date();
     const diffTime = eventDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }, [giftEvent?.eventDate]);
 
-  const handleAddToCart = async (product: any) => {
+  const markProductAsPurchased = useCallback(async (productId: string) => {
+    try {
+      await GiftService.markProductAsPurchased(eventId, productId);
+      await loadGiftEvent();
+    } catch (error) {
+      // Silent fail - cart was added successfully, just couldn't mark as purchased
+      console.log('Could not mark as purchased (permission issue), but item added to cart');
+    }
+  }, [eventId, loadGiftEvent]);
+
+  const handleAddToCart = useCallback(async (product: Product) => {
+    if (!giftEvent) {
+      toast.error('Gift event not available');
+      return;
+    }
+
     try {
       // Add product to cart with special gift delivery info
       addToCart({
@@ -133,27 +156,22 @@ export default function GiftEventPage() {
         quantity: 1,
         customizations: {
           giftEventId: eventId,
-          giftDeliveryAddress: JSON.stringify(giftEvent?.deliveryAddress)
+          giftDeliveryAddress: JSON.stringify(giftEvent.deliveryAddress)
         },
         totalPrice: product.price
       });
 
-      toast.success(`${product.title} added to cart! This will be delivered to ${giftEvent?.recipientName}.`);
+      toast.success(`${product.title} added to cart! This will be delivered to ${giftEvent.recipientName}.`);
 
-      // Only mark as purchased if user is logged in (to avoid permission errors)
+      // Mark as purchased if user is authenticated
       if (user) {
-        try {
-          await GiftService.markProductAsPurchased(eventId, product.$id);
-          await loadGiftEvent(); // Reload to update the wishlist
-        } catch (error) {
-          console.log('Could not mark as purchased (user not authorized), but item added to cart');
-        }
+        await markProductAsPurchased(product.$id);
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
       toast.error('Failed to add item to cart. Please try again.');
     }
-  };
+  }, [giftEvent, eventId, addToCart, user, markProductAsPurchased]);
 
   const isPurchased = (productId: string) => {
     return giftEvent?.purchasedItems?.includes(productId) || false;
@@ -207,7 +225,7 @@ export default function GiftEventPage() {
               <span className="text-text-primary font-medium">{giftEvent.recipientName}</span>
             </p>
             <p className="text-text-muted">
-              {new Date(giftEvent.eventDate).toLocaleDateString()} • {getDaysUntilEvent()} days to go
+              {new Date(giftEvent.eventDate).toLocaleDateString()} • {daysUntilEvent} days to go
             </p>
           </div>
 
@@ -228,7 +246,7 @@ export default function GiftEventPage() {
               <div className="w-full bg-background-tertiary rounded-full h-4 mb-4">
                 <div
                   className="bg-blue-500 h-4 rounded-full transition-all duration-300"
-                  style={{ width: `${getProgressPercentage()}%` }}
+                  style={{ width: `${progressPercentage}%` }}
                 ></div>
               </div>
 

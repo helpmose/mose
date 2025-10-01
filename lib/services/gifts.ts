@@ -569,10 +569,10 @@ export class GiftService {
       const totalEvents = events.length;
       const activeEvents = events.filter(event => event.status === GIFT_EVENT_STATUS.ACTIVE).length;
       const completedEvents = events.filter(event => event.status === GIFT_EVENT_STATUS.COMPLETED).length;
-      const totalRaised = events.reduce((sum, event) => sum + event.currentAmount, 0);
-      const totalContributions = events.reduce((sum, event) => sum + event.contributorsCount, 0);
-      const averageGoalCompletion = totalEvents > 0 
-        ? events.reduce((sum, event) => sum + (event.currentAmount / event.giftGoal), 0) / totalEvents
+      const totalRaised = events.reduce((sum, event) => sum + (event.currentAmount || 0), 0);
+      const totalContributions = events.reduce((sum, event) => sum + (event.contributorsCount || 0), 0);
+      const averageGoalCompletion = totalEvents > 0
+        ? events.reduce((sum, event) => sum + ((event.currentAmount || 0) / (event.giftGoal || 1)), 0) / totalEvents
         : 0;
 
       console.log('✅ Gift event statistics calculated');
