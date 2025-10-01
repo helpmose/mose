@@ -59,7 +59,13 @@ export const USER_ROLES = {
 
 // Appwrite Database Configuration
 export const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || 'mose_database';
-export const USERS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID || 'users';
+export const USER_PROFILES_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_USER_PROFILES_COLLECTION_ID || 'user_profiles';
+export const PRODUCTS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_PRODUCTS_COLLECTION_ID || 'products';
+export const ORDERS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_ORDERS_COLLECTION_ID || 'orders';
+export const GIFT_EVENTS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_GIFT_EVENTS_COLLECTION_ID || 'gift_events';
+export const CONVERSATIONS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_CONVERSATIONS_COLLECTION_ID || 'conversations';
+export const MESSAGES_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_MESSAGES_COLLECTION_ID || 'messages';
+export const NOTIFICATIONS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATIONS_COLLECTION_ID || 'notifications';
 
 // Order Status
 export const ORDER_STATUS = {
@@ -83,9 +89,11 @@ export const PAYMENT_STATUS = {
 // Product Status
 export const PRODUCT_STATUS = {
   DRAFT: 'draft',
+  PENDING_APPROVAL: 'pending_approval',
   ACTIVE: 'active',
-  SOLD: 'sold',
-  PENDING_APPROVAL: 'pending_approval'
+  REJECTED: 'rejected',
+  FLAGGED: 'flagged', 
+  SOLD: 'sold'
 } as const;
 
 // Seller Verification Status
@@ -93,6 +101,23 @@ export const VERIFICATION_STATUS = {
   PENDING: 'pending',
   VERIFIED: 'verified',
   REJECTED: 'rejected'
+} as const;
+
+// Gift Event Status
+export const GIFT_EVENT_STATUS = {
+  DRAFT: 'draft',
+  ACTIVE: 'active',
+  PAUSED: 'paused',
+  COMPLETED: 'completed',
+  EXPIRED: 'expired',
+  CANCELLED: 'cancelled'
+} as const;
+
+// Gift Privacy Settings
+export const GIFT_PRIVACY = {
+  PUBLIC: 'public',
+  PRIVATE: 'private',
+  FRIENDS_ONLY: 'friends_only'
 } as const;
 
 // Nigerian States

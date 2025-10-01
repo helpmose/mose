@@ -8,6 +8,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useAuthStore } from "@/store/auth-store";
 import { useCartStore } from "@/store/cart-store";
 import { useWishlistStore } from "@/store/wishlist-store";
+import { useNotificationCount } from "@/hooks/use-notifications";
 import AuthSection from "./auth-section";
 import CartSidebar from "@/components/marketplace/cart-sidebar";
 import NotificationCenter from "@/components/notifications/notification-center";
@@ -19,6 +20,7 @@ export default function Header() {
   const { user } = useAuthStore();
   const { getTotalItems } = useCartStore();
   const { getWishlistCount } = useWishlistStore();
+  const { unreadCount, hasUnread } = useNotificationCount();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -30,8 +32,15 @@ export default function Header() {
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 
-  const totalItems = getTotalItems();
-  const wishlistCount = getWishlistCount();
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Wait for hydration to complete before showing counts
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  const totalItems = isHydrated ? getTotalItems() : 0;
+  const wishlistCount = isHydrated ? getWishlistCount() : 0;
 
   // Handle click outside mobile menu
   useEffect(() => {
@@ -183,9 +192,11 @@ export default function Header() {
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h11a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
-                    <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      2
-                    </span>
+                    {hasUnread && (
+                      <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
                   </button>
                 )}
 
@@ -307,7 +318,7 @@ export default function Header() {
                         }}
                         className="block text-text-secondary hover:text-text-primary transition-colors py-2 w-full text-left"
                       >
-                        Notifications (2)
+                        Notifications {hasUnread && `(${unreadCount})`}
                       </button>
                     </>
                   )}

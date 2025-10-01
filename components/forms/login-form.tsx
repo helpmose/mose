@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/auth-store";
+import { type UserError } from "@/lib/utils/error-handler";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -19,9 +20,9 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [userError, setUserError] = useState<UserError | null>(null);
   const router = useRouter();
-  const { login, user } = useAuthStore();
+  const { login, handleAuthRedirect } = useAuthStore();
 
   const {
     register,
@@ -33,22 +34,37 @@ export default function LoginForm() {
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
-    setError(null);
+    setUserError(null);
+    
     try {
       await login(data.email, data.password);
-      // Get user from store to determine redirect
-      const currentUser = useAuthStore.getState().user;
-      // Redirect to role-specific dashboard
-      if (currentUser?.role === 'seller') {
-        router.push('/seller');
-      } else if (currentUser?.role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push('/buyer');
-      }
+      console.log('✅ Login successful, redirecting...');
+      // Use the auth store's redirect logic for consistent routing
+      const redirectPath = handleAuthRedirect();
+      router.push(redirectPath);
     } catch (error: any) {
       console.error("Login error:", error);
-      setError(error.message || 'Failed to sign in. Please check your credentials.');
+      
+      // Check if the error is from auth store's lastError
+      const authState = useAuthStore.getState();
+      if (authState.lastError) {
+        setUserError(authState.lastError);
+        
+        // Handle specific error actions
+        if (authState.lastError.action === 'login' && authState.lastError.redirectTo) {
+          // Redirect for profile completion
+          setTimeout(() => {
+            router.push(authState.lastError!.redirectTo!);
+          }, 2000);
+        }
+      } else {
+        // Fallback for unexpected errors
+        setUserError({
+          message: 'Sign in failed. Please check your email and password and try again.',
+          action: 'retry',
+          technical: error?.message || 'Login failed'
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -67,9 +83,68 @@ export default function LoginForm() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-              <p className="text-red-400 text-sm">{error}</p>
+          {userError && (
+            <div className={`border rounded-lg p-4 ${
+              userError.action === 'login' 
+                ? 'bg-blue-500/10 border-blue-500/20' 
+                : 'bg-red-500/10 border-red-500/20'
+            }`}>
+              <p className={`text-sm font-medium mb-2 ${
+                userError.action === 'login' 
+                  ? 'text-blue-400' 
+                  : 'text-red-400'
+              }`}>
+                {userError.message}
+              </p>
+              
+              {userError.action === 'login' && userError.redirectTo && (
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-text-muted">
+                    Redirecting to complete setup...
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => router.push(userError.redirectTo!)}
+                    className="text-xs"
+                  >
+                    Complete Setup
+                  </Button>
+                </div>
+              )}
+              
+              {userError.action === 'contact_support' && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => router.push('/support')}
+                  className="text-xs mt-2"
+                >
+                  Contact Support
+                </Button>
+              )}
+              
+              {userError.action === 'retry' && (
+                <p className="text-xs text-text-muted mt-1">
+                  Please check your credentials and try again.
+                </p>
+              )}
+              
+              {userError.action === 'different_email' && (
+                <div className="mt-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => router.push('/register')}
+                    className="text-xs"
+                  >
+                    Create New Account
+                  </Button>
+                </div>
+              )}
             </div>
           )}
           

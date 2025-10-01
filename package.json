@@ -6,18 +6,26 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup:collections": "tsx scripts/create-collections.ts",
+    "setup:profiles": "tsx scripts/add-user-profiles.ts",
+    "seed:admin": "tsx scripts/seed-admin.ts",
+    "verify:storage": "tsx scripts/verify-storage.ts",
+    "mcp:test": "uvx mcp-server-appwrite --databases --users --storage list-databases",
+    "mcp:collections": "uvx mcp-server-appwrite --databases list-collections",
+    "mcp:buckets": "uvx mcp-server-appwrite --storage list-buckets"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.2",
     "appwrite": "^15.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
+    "dotenv": "^16.6.1",
     "next": "15.3.4",
-    
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.48.2",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^2.2.0",
     "workbox-webpack-plugin": "^7.3.0",
     "zod": "^3.22.4",
@@ -28,7 +36,9 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "node-appwrite": "^19.0.0",
     "tailwindcss": "^4",
+    "tsx": "^4.20.5",
     "typescript": "^5"
   }
 }

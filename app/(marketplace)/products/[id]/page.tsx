@@ -11,6 +11,8 @@ import { useCartStore } from "@/store/cart-store";
 import { useAuthStore } from "@/store/auth-store";
 import { formatPrice } from "@/lib/utils";
 import { Product } from "@/lib/types";
+import ProductService from "@/lib/services/product";
+import { UserService } from "@/lib/services/user";
 
 function ProductDetailContent() {
   const params = useParams();
@@ -19,109 +21,62 @@ function ProductDetailContent() {
   const { user } = useAuthStore();
   
   const [product, setProduct] = useState<Product | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
+  const [sellerInfo, setSellerInfo] = useState<any>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [showImageModal, setShowImageModal] = useState(false);
-
-  // Mock product data - in real app, this would fetch from API
-  const mockProducts: Product[] = [
-    {
-      $id: "1",
-      title: "Traditional African Mask",
-      description: "This exquisite handcrafted wooden mask represents the rich cultural heritage of West Africa. Each piece is meticulously carved by master artisans using traditional techniques passed down through generations.\n\nCrafted from premium hardwood and finished with natural oils, this mask showcases exceptional skill. The detailed facial features and geometric patterns carry deep cultural significance, representing protection, wisdom, and spiritual connection.\n\nPerfect for collectors, cultural enthusiasts, or as a striking centerpiece for your home decor.",
-      price: 45000,
-      salePrice: 36000,
-      category: "Masks",
-      subcategory: "Traditional Masks",
-      images: ["/u9499386881_Handcrafted_wooden_mask_from_West_Africa_with_int_738ba0b3-44b8-41ea-9d40-7420f5cb547d_0.png"],
-      sellerId: "seller1",
-      sellerName: "Adebayo Arts",
-      status: "active",
-      customizable: false,
-      stock: 5,
-      dimensions: {
-        width: 25,
-        height: 35,
-        depth: 8,
-        weight: 1.2
-      },
-      materials: ["Hardwood", "Natural Oil Finish", "Traditional Pigments"],
-      tags: ["traditional", "mask", "wood", "handcrafted", "west-africa"],
-      featured: true,
-      views: 120,
-      likes: 15,
-      rating: 4.8,
-      reviewCount: 12,
-      shares: 8,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      $id: "2",
-      title: "Kente Cloth Textile",
-      description: "Authentic Ghanaian Kente cloth featuring traditional patterns and vibrant colors. This textile represents centuries of weaving mastery and cultural storytelling through fabric.\n\nEach Kente cloth tells a unique story through its patterns, colors, and symbols. Hand-woven using traditional techniques, perfect for special occasions or as beautiful wall hanging.",
-      price: 75000,
-      category: "Textiles",
-      subcategory: "Kente Cloth",
-      images: ["/u9499386881_Authentic_Ghanaian_Kente_cloth_with_traditional_p_57291fc6-852a-4a94-a047-66de0bc866b6_0.png"],
-      sellerId: "seller2",
-      sellerName: "Ghana Crafts",
-      status: "active",
-      customizable: true,
-      stock: 3,
-      materials: ["Cotton", "Silk", "Traditional Dyes"],
-      tags: ["kente", "textile", "ghana", "handwoven", "traditional"],
-      featured: false,
-      views: 89,
-      likes: 22,
-      rating: 4.9,
-      reviewCount: 8,
-      shares: 12,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      $id: "3",
-      title: "Bronze Sculpture",
-      description: "Contemporary African bronze sculpture by renowned artist. This exceptional piece showcases the fusion of traditional African artistry with modern sculptural techniques.\n\nCrafted by master sculptors using premium bronze, this sculpture represents the evolution of African art in the contemporary world. Each piece carries cultural significance while appealing to modern aesthetic sensibilities.\n\nPerfect for art collectors, galleries, or as a statement piece in sophisticated interiors.",
-      price: 120000,
-      salePrice: 96000,
-      category: "Sculptures",
-      subcategory: "Contemporary Sculptures",
-      images: ["/u9499386881_Contemporary_African_bronze_sculpture_by_renowned_a7632d19-a74f-4a7a-b24d-2637fa95c648_2.png"],
-      sellerId: "seller3",
-      sellerName: "Modern Africa Arts",
-      status: "active",
-      customizable: false,
-      stock: 1,
-      dimensions: {
-        width: 30,
-        height: 45,
-        depth: 20,
-        weight: 8.5
-      },
-      materials: ["Bronze", "Patina Finish", "Marble Base"],
-      tags: ["bronze", "sculpture", "contemporary", "art", "collectible"],
-      featured: true,
-      views: 200,
-      likes: 45,
-      rating: 5.0,
-      reviewCount: 6,
-      shares: 15,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-  ];
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const foundProduct = mockProducts.find(p => p.$id === params.id);
-      setProduct(foundProduct || null);
-      setIsLoading(false);
-    }, 500);
+    async function fetchProduct() {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const productId = params.id as string;
+        console.log('🔍 Fetching product:', productId);
+        
+        const fetchedProduct = await ProductService.getProduct(productId);
+        setProduct(fetchedProduct);
+        
+        // Fetch seller information
+        if (fetchedProduct.sellerId) {
+          try {
+            const seller = await UserService.getProfile(fetchedProduct.sellerId);
+            setSellerInfo(seller);
+          } catch (error) {
+            console.warn('Could not fetch seller info:', error);
+          }
+        }
+        
+        // Fetch related products from the same category
+        if (fetchedProduct.category) {
+          try {
+            const { products: related } = await ProductService.getProducts({
+              category: fetchedProduct.category,
+              limit: 4,
+              excludeProductId: productId
+            });
+            setRelatedProducts(related);
+          } catch (error) {
+            console.warn('Could not fetch related products:', error);
+          }
+        }
+        
+      } catch (error) {
+        console.error('❌ Error fetching product:', error);
+        setError('Failed to load product');
+        setProduct(null);
+      } finally {
+        setIsLoading(false);
+      }
+    }
 
-    return () => clearTimeout(timer);
+    if (params.id) {
+      fetchProduct();
+    }
   }, [params.id]);
 
   const handleAddToCart = () => {
@@ -233,6 +188,29 @@ function ProductDetailContent() {
                 </div>
               )}
             </div>
+            
+            {/* Image Thumbnails */}
+            {product.images && product.images.length > 1 && (
+              <div className="flex space-x-2">
+                {product.images.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImage(index)}
+                    className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
+                      index === selectedImage ? 'border-text-primary' : 'border-transparent hover:border-text-secondary'
+                    }`}
+                  >
+                    <Image
+                      src={image}
+                      alt={`${product.title} ${index + 1}`}
+                      width={64}
+                      height={64}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}
@@ -245,14 +223,14 @@ function ProductDetailContent() {
                   {Array.from({ length: 5 }).map((_, i) => (
                     <svg
                       key={i}
-                      className={`w-5 h-5 ${i < Math.floor(product.rating) ? "text-yellow-500 fill-current" : "text-neutral-600"}`}
+                      className={`w-5 h-5 ${i < Math.floor(product.rating || 0) ? "text-yellow-500 fill-current" : "text-neutral-600"}`}
                       viewBox="0 0 24 24"
                     >
                       <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                     </svg>
                   ))}
                   <span className="text-text-muted ml-2">
-                    {product.rating} ({product.reviewCount} reviews)
+                    {product.rating || 0} ({product.reviewCount || 0} reviews)
                   </span>
                 </div>
               </div>
@@ -297,7 +275,13 @@ function ProductDetailContent() {
                 {product.dimensions && (
                   <div className="flex justify-between">
                     <span className="text-text-muted">Dimensions:</span>
-                    <span>{product.dimensions.width} × {product.dimensions.height}cm</span>
+                    <span>{product.dimensions.width} × {product.dimensions.height} {product.dimensions.depth ? `× ${product.dimensions.depth}` : ''} cm</span>
+                  </div>
+                )}
+                {product.dimensions?.weight && (
+                  <div className="flex justify-between">
+                    <span className="text-text-muted">Weight:</span>
+                    <span>{product.dimensions.weight} kg</span>
                   </div>
                 )}
                 <div className="flex justify-between">
@@ -314,13 +298,23 @@ function ProductDetailContent() {
               <h4 className="font-medium mb-3">Seller Information</h4>
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-text-primary text-background-primary rounded-full flex items-center justify-center font-bold">
-                  {product.sellerName?.charAt(0).toUpperCase()}
+                  {sellerInfo?.businessName ? sellerInfo.businessName[0].toUpperCase() : product.sellerName[0].toUpperCase()}
                 </div>
-                <div>
-                  <p className="font-medium">{product.sellerName}</p>
-                  <p className="text-text-muted text-sm">Verified Seller</p>
+                <div className="flex-1">
+                  <p className="font-medium">{sellerInfo?.businessName || product.sellerName}</p>
+                  {sellerInfo?.location && (
+                    <p className="text-text-muted text-sm">{sellerInfo.location}</p>
+                  )}
+                  {sellerInfo?.rating && (
+                    <div className="flex items-center space-x-1 mt-1">
+                      <svg className="w-4 h-4 text-yellow-500 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                      <span className="text-sm text-text-muted">{sellerInfo.rating.toFixed(1)}</span>
+                    </div>
+                  )}
                 </div>
-                <Button variant="outline" size="sm" className="ml-auto">
+                <Button variant="outline" size="sm" className="ml-auto" onClick={() => router.push(`/sellers/${product.sellerId}`)}>
                   View Profile
                 </Button>
               </div>
@@ -391,36 +385,57 @@ function ProductDetailContent() {
 
         {/* Related Products */}
         <div className="mt-16">
-          <h2 className="text-2xl font-serif font-light mb-8">Related Products</h2>
+          <h2 className="text-2xl font-serif font-light mb-8">More from this Category</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {mockProducts.filter(p => p.$id !== product.$id && p.category === product.category).map((relatedProduct) => (
-              <button
-                key={relatedProduct.$id}
-                onClick={() => router.push(`/products/${relatedProduct.$id}`)}
-                className="bg-background-secondary border border-neutral-800 rounded-lg p-4 hover:border-text-primary transition-colors text-left"
-              >
-                <div className="aspect-square bg-background-tertiary rounded-lg mb-3 overflow-hidden relative">
-                  {relatedProduct.images && relatedProduct.images.length > 0 ? (
-                    <Image
-                      src={relatedProduct.images[0]}
-                      alt={relatedProduct.title}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <svg className="w-12 h-12 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
+            {relatedProducts.length > 0 ? (
+              relatedProducts.map((relatedProduct) => (
+                <Card 
+                  key={relatedProduct.$id} 
+                  className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => router.push(`/products/${relatedProduct.$id}`)}
+                >
+                  <div className="aspect-square bg-background-secondary overflow-hidden relative">
+                    {relatedProduct.images && relatedProduct.images.length > 0 ? (
+                      <Image
+                        src={relatedProduct.images[0]}
+                        alt={relatedProduct.title}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <svg className="w-12 h-12 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-medium text-sm mb-2 line-clamp-2">{relatedProduct.title}</h3>
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-text-primary">
+                        {formatPrice(relatedProduct.salePrice || relatedProduct.price)}
+                      </span>
+                      {relatedProduct.salePrice && (
+                        <span className="text-sm text-text-muted line-through">
+                          {formatPrice(relatedProduct.price)}
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
-                <h3 className="font-medium mb-1 line-clamp-2">{relatedProduct.title}</h3>
-                <p className="text-text-primary font-semibold">
-                  {formatPrice(relatedProduct.salePrice || relatedProduct.price)}
-                </p>
-              </button>
-            ))}
+                    <div className="flex items-center space-x-1 mt-2">
+                      <svg className="w-4 h-4 text-yellow-500 fill-current" viewBox="0 0 24 24">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                      <span className="text-sm text-text-muted">{relatedProduct.rating || 0}</span>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            ) : (
+              <p className="text-text-muted col-span-full text-center py-8">
+                {isLoading ? 'Loading related products...' : 'No related products found'}
+              </p>
+            )}
           </div>
         </div>
       </div>

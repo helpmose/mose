@@ -9,13 +9,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/auth-store";
+import { type UserError } from "@/lib/utils/error-handler";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string(),
-  role: z.enum(["buyer", "seller"]),
+  role: z.enum(["buyer", "seller", "admin"]),
   agreeToTerms: z.boolean().refine((val) => val === true, {
     message: "You must agree to the terms and conditions",
   }),
@@ -28,14 +29,14 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [userError, setUserError] = useState<UserError | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { register: registerUser } = useAuthStore();
+  const { register: registerUser, handleAuthRedirect } = useAuthStore();
 
   // Get role from URL parameters
   const roleFromUrl = searchParams.get('role');
-  const defaultRole = (roleFromUrl === 'seller' || roleFromUrl === 'buyer') ? roleFromUrl : 'buyer';
+  const defaultRole = (roleFromUrl === 'seller' || roleFromUrl === 'buyer' || roleFromUrl === 'admin') ? roleFromUrl : 'buyer';
 
   const {
     register,
@@ -46,14 +47,14 @@ export default function RegisterForm() {
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      role: defaultRole as "buyer" | "seller",
+      role: defaultRole as "buyer" | "seller" | "admin",
     },
   });
 
   // Set role from URL on component mount
   useEffect(() => {
-    if (roleFromUrl === 'seller' || roleFromUrl === 'buyer') {
-      setValue('role', roleFromUrl as "buyer" | "seller");
+    if (roleFromUrl === 'seller' || roleFromUrl === 'buyer' || roleFromUrl === 'admin') {
+      setValue('role', roleFromUrl as "buyer" | "seller" | "admin");
     }
   }, [roleFromUrl, setValue]);
 
@@ -61,18 +62,37 @@ export default function RegisterForm() {
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
-    setError(null);
+    setUserError(null);
+    
     try {
-      await registerUser(data.email, data.password, data.name, data.role);
-      // Redirect to role-specific dashboard
-      if (data.role === 'seller') {
-        router.push('/seller');
+      const result = await registerUser(data.email, data.password, data.name, data.role);
+      
+      if (result.success) {
+        console.log('✅ Registration successful, redirecting...');
+        // Use the auth store's redirect logic for consistent routing
+        const redirectPath = handleAuthRedirect();
+        router.push(redirectPath);
       } else {
-        router.push('/buyer');
+        // Handle structured error response
+        console.log('❌ Registration failed:', result.error?.message);
+        setUserError(result.error || null);
+        
+        // Handle specific error actions
+        if (result.error?.action === 'login' && result.error.redirectTo) {
+          // Account already exists - redirect to login after a delay
+          setTimeout(() => {
+            router.push(result.error!.redirectTo!);
+          }, 2000);
+        }
       }
     } catch (error: any) {
-      console.error("Registration error:", error);
-      setError(error.message || 'Failed to create account. Please try again.');
+      // Fallback for unexpected errors (should not happen with new system)
+      console.error("Unexpected registration error:", error);
+      setUserError({
+        message: 'Something went wrong. Please try again or contact support if the problem persists.',
+        action: 'retry',
+        technical: error?.message || 'Unexpected error'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -91,9 +111,54 @@ export default function RegisterForm() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-              <p className="text-red-400 text-sm">{error}</p>
+          {userError && (
+            <div className={`border rounded-lg p-4 ${
+              userError.action === 'login' 
+                ? 'bg-blue-500/10 border-blue-500/20' 
+                : 'bg-red-500/10 border-red-500/20'
+            }`}>
+              <p className={`text-sm font-medium mb-2 ${
+                userError.action === 'login' 
+                  ? 'text-blue-400' 
+                  : 'text-red-400'
+              }`}>
+                {userError.message}
+              </p>
+              
+              {userError.action === 'login' && userError.redirectTo && (
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-text-muted">
+                    Redirecting to sign in page...
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => router.push(userError.redirectTo!)}
+                    className="text-xs"
+                  >
+                    Sign In Now
+                  </Button>
+                </div>
+              )}
+              
+              {userError.action === 'contact_support' && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => router.push('/support')}
+                  className="text-xs mt-2"
+                >
+                  Contact Support
+                </Button>
+              )}
+              
+              {userError.action === 'retry' && (
+                <p className="text-xs text-text-muted mt-1">
+                  Please correct the issue and try again.
+                </p>
+              )}
             </div>
           )}
           
@@ -102,7 +167,7 @@ export default function RegisterForm() {
             <label className="text-sm font-medium text-text-secondary mb-3 block">
               I want to:
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               <label className="relative cursor-pointer">
                 <input
                   {...register("role")}
@@ -139,6 +204,25 @@ export default function RegisterForm() {
                   <div className="text-2xl mb-2">🎨</div>
                   <div className="font-medium">Sell Art</div>
                   <div className="text-xs opacity-75">Share your creations</div>
+                </div>
+              </label>
+              <label className="relative cursor-pointer">
+                <input
+                  {...register("role")}
+                  type="radio"
+                  value="admin"
+                  className="sr-only"
+                />
+                <div
+                  className={`p-4 border rounded-lg text-center transition-colors ${
+                    selectedRole === "admin"
+                      ? "border-text-primary bg-text-primary text-background-primary"
+                      : "border-neutral-700 bg-background-tertiary text-text-secondary hover:border-neutral-600"
+                  }`}
+                >
+                  <div className="text-2xl mb-2">👑</div>
+                  <div className="font-medium">Admin</div>
+                  <div className="text-xs opacity-75">Manage platform</div>
                 </div>
               </label>
             </div>

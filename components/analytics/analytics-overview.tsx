@@ -79,8 +79,8 @@ export default function AnalyticsOverview({ metrics, period }: AnalyticsOverview
               <div className="flex-1">
                 <p className="text-sm text-text-muted mb-1">{metric.title}</p>
                 <p className="text-2xl font-bold text-text-primary">
-                  {typeof metric.value === 'number' && metric.title.toLowerCase().includes('revenue') 
-                    ? formatPrice(metric.value)
+                  {typeof metric.value === 'number' && metric.title.toLowerCase().includes('revenue')
+                    ? formatPrice(metric.value / 100)
                     : metric.value
                   }
                 </p>

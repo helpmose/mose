@@ -162,7 +162,7 @@ export default function ProductPerformance({ products, sortBy, onSortChange }: P
                 <div className="text-center">
                   <p className="text-sm text-text-muted">Revenue</p>
                   <p className={`font-medium ${getPerformanceColor(product.revenue, maxValues.revenue)}`}>
-                    {formatPrice(product.revenue)}
+                    {formatPrice(product.revenue / 100)}
                   </p>
                 </div>
                 <div className="text-center">
@@ -219,7 +219,7 @@ export default function ProductPerformance({ products, sortBy, onSortChange }: P
                 <div className="flex justify-between">
                   <span className="text-sm text-text-muted">Revenue:</span>
                   <span className={`text-sm font-medium ${getPerformanceColor(product.revenue, maxValues.revenue)}`}>
-                    {formatPrice(product.revenue)}
+                    {formatPrice(product.revenue / 100)}
                   </span>
                 </div>
                 <div className="flex justify-between">

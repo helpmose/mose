@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/lib/contexts/theme-context";
+import { Toaster } from "sonner";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -131,6 +132,12 @@ export default function RootLayout({
             {/* PWA Install Prompt */}
             {/* <div id="pwa-install-prompt" className="hidden" /> */}
             {children}
+            <Toaster
+              theme="dark"
+              position="top-right"
+              richColors
+              closeButton
+            />
           </div>
         </ThemeProvider>
       </body>

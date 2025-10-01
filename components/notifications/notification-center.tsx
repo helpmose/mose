@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
+import { NotificationService, NotificationData } from "@/lib/services/notifications";
+import { useAuthStore } from "@/store/auth-store";
 
 interface Notification {
   id: string;
@@ -24,86 +26,68 @@ interface NotificationCenterProps {
 
 export default function NotificationCenter({ isOpen, onClose }: NotificationCenterProps) {
   const router = useRouter();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { user } = useAuthStore();
+  const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [loading, setLoading] = useState(false);
 
-  // Mock notifications
+  // Load real notifications
   useEffect(() => {
-    const mockNotifications: Notification[] = [
-      {
-        id: '1',
-        type: 'order',
-        title: 'Order Shipped',
-        message: 'Your order #MOSE-ABC123 has been shipped and is on its way!',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-        read: false,
-        actionUrl: '/dashboard?tab=orders',
-        metadata: { orderId: 'MOSE-ABC123' }
-      },
-      {
-        id: '2',
-        type: 'payment',
-        title: 'Payment Successful',
-        message: 'Payment of ₦45,000 for Traditional African Mask has been processed successfully.',
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-        read: false,
-        actionUrl: '/dashboard?tab=orders',
-        metadata: { amount: 45000 }
-      },
-      {
-        id: '3',
-        type: 'product',
-        title: 'Product Back in Stock',
-        message: 'Bronze Sculpture by Modern Africa Arts is now available!',
-        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-        read: true,
-        actionUrl: '/products/3',
-        metadata: { productId: '3' }
-      },
-      {
-        id: '4',
-        type: 'promotion',
-        title: 'Special Offer',
-        message: 'Get 20% off on all Kente textiles this weekend only!',
-        timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-        read: true,
-        actionUrl: '/products?category=Textiles',
-        metadata: { discount: 20 }
-      },
-      {
-        id: '5',
-        type: 'system',
-        title: 'Welcome to MOSÉ',
-        message: 'Thank you for joining our community of African art lovers!',
-        timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 1 week ago
-        read: true,
-        actionUrl: '/products',
+    const loadNotifications = async () => {
+      if (!user || !isOpen) return;
+      
+      setLoading(true);
+      try {
+        const response = await NotificationService.getUserNotifications(user.$id, 20);
+        setNotifications(response.notifications);
+      } catch (error) {
+        console.error('Failed to load notifications:', error);
+        // Fallback to empty notifications
+        setNotifications([]);
+      } finally {
+        setLoading(false);
       }
-    ];
+    };
 
-    setNotifications(mockNotifications);
-  }, []);
+    loadNotifications();
+  }, [user, isOpen]);
 
   const filteredNotifications = filter === 'unread' 
-    ? notifications.filter(n => !n.read)
+    ? notifications.filter(n => !n.isRead)
     : notifications;
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, read: true } : n)
-    );
+  const markAsRead = async (id: string) => {
+    try {
+      await NotificationService.markAsRead(id);
+      setNotifications(prev => 
+        prev.map(n => n.$id === id ? { ...n, isRead: true } : n)
+      );
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(n => ({ ...n, read: true }))
-    );
+  const markAllAsRead = async () => {
+    try {
+      const unreadIds = notifications.filter(n => !n.isRead).map(n => n.$id);
+      await Promise.all(unreadIds.map(id => NotificationService.markAsRead(id)));
+      setNotifications(prev => 
+        prev.map(n => ({ ...n, isRead: true }))
+      );
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
   };
 
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+  const deleteNotification = async (id: string) => {
+    try {
+      await NotificationService.deleteNotification(id);
+      setNotifications(prev => prev.filter(n => n.$id !== id));
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
+    }
   };
 
   const getNotificationIcon = (type: string) => {
@@ -266,56 +250,71 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
             </div>
           ) : (
             <div className="p-4 space-y-3">
-              {filteredNotifications.map((notification) => (
-                <Card 
-                  key={notification.id} 
-                  className={`p-4 cursor-pointer transition-colors ${
-                    !notification.read ? 'border-blue-500/30 bg-blue-500/5' : ''
-                  }`}
-                  onClick={() => {
-                    markAsRead(notification.id);
-                    if (notification.actionUrl) {
-                      router.push(notification.actionUrl);
-                    }
-                  }}
-                >
-                  <div className="flex items-start space-x-3">
-                    {getNotificationIcon(notification.type)}
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <h4 className="font-medium text-text-primary text-sm">
-                          {notification.title}
-                        </h4>
-                        <div className="flex items-center space-x-2 ml-2">
-                          {!notification.read && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          )}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteNotification(notification.id);
-                            }}
-                            className="text-text-muted hover:text-red-500 transition-colors"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        </div>
+              {loading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <Card key={i} className="p-4 animate-pulse">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                      <div className="flex-1">
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/4"></div>
                       </div>
-                      
-                      <p className="text-text-muted text-sm mt-1 line-clamp-2">
-                        {notification.message}
-                      </p>
-                      
-                      <p className="text-xs text-text-muted mt-2">
-                        {formatTimestamp(notification.timestamp)}
-                      </p>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                ))
+              ) : (
+                filteredNotifications.map((notification) => (
+                  <Card 
+                    key={notification.$id} 
+                    className={`p-4 cursor-pointer transition-colors ${
+                      !notification.isRead ? 'border-blue-500/30 bg-blue-500/5' : ''
+                    }`}
+                    onClick={() => {
+                      markAsRead(notification.$id);
+                      if (notification.data?.actionUrl) {
+                        router.push(notification.data.actionUrl);
+                      }
+                    }}
+                  >
+                    <div className="flex items-start space-x-3">
+                      {getNotificationIcon(notification.type)}
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between">
+                          <h4 className="font-medium text-text-primary text-sm">
+                            {notification.title}
+                          </h4>
+                          <div className="flex items-center space-x-2 ml-2">
+                            {!notification.isRead && (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteNotification(notification.$id);
+                              }}
+                              className="text-text-muted hover:text-red-500 transition-colors"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <p className="text-text-muted text-sm mt-1 line-clamp-2">
+                          {notification.message}
+                        </p>
+                        
+                        <p className="text-xs text-text-muted mt-2">
+                          {formatTimestamp(new Date(notification.$createdAt))}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              )}
             </div>
           )}
         </div>

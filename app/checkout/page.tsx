@@ -54,14 +54,25 @@ export default function CheckoutPage() {
   const tax = Math.round(subtotal * 0.075); // 7.5% VAT
   const total = subtotal + shipping + tax;
 
+  // Debug pricing calculation
+  console.log('💰 Checkout pricing breakdown:', {
+    cartItems: items.length,
+    subtotal: formatPrice(subtotal), // formatPrice expects kobo
+    shipping: formatPrice(shipping),
+    tax: formatPrice(tax),
+    total: formatPrice(total),
+    totalInKobo: total,
+    totalInNaira: total / 100
+  });
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handlePaymentSuccess = (reference: string) => {
-    console.log('Payment successful:', reference);
-    // Payment success is handled by the PaystackButton component
+  const handlePaymentSuccess = (orderId: string) => {
+    console.log('Order created successfully:', orderId);
+    // Order creation success is handled by the PaystackButton component
     // Cart is cleared and user is redirected to success page
   };
 
@@ -331,14 +342,16 @@ export default function CheckoutPage() {
                 <PaystackButton
                   amount={total}
                   email={formData.email}
-                  metadata={{
-                    orderId: `MOSE-${Date.now()}`,
-                    userId: user?.$id || 'guest',
-                    items: items.map(item => ({
-                      productId: item.productId,
-                      quantity: item.quantity,
-                      price: item.product.price,
-                    })),
+                  shippingInfo={{
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    email: formData.email,
+                    phone: formData.phone,
+                    address: formData.address,
+                    city: formData.city,
+                    state: formData.state,
+                    postalCode: formData.postalCode,
+                    orderNotes: formData.orderNotes
                   }}
                   disabled={!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address || !formData.city || !formData.state}
                   className="w-full bg-text-primary text-background-primary hover:bg-text-secondary"

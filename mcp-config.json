@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "mose-appwrite": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-appwrite",
+        "--databases",
+        "--users",
+        "--storage"
+      ],
+      "env": {
+        "APPWRITE_PROJECT_ID": "686009220034820fd017",
+        "APPWRITE_API_KEY": "standard_61249273df2368d81f0f0d83e5b7141960d45f12489a4c2d0bf3d9e96bacaee94bb647fb590c07e10d241726c5c7a22e6073d8840037ab0aebb60dc1cf599c0559178dca40d8339aea4328b8d232cf923dd0f35469ae5f2529c1d509d40dd15a1742af8cc4d0ddf7af75383795e2dbc0a3ce1387d4504244393c14c42f38a020",
+        "APPWRITE_ENDPOINT": "https://cloud.appwrite.io/v1",
+        "APPWRITE_DATABASE_ID": "mose_database"
+      }
+    }
+  }
+}
