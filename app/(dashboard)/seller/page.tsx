@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Header from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,7 +20,7 @@ import SellerProfileManagement from "@/components/seller/seller-profile-manageme
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuthProtection, AuthLoadingScreen } from "@/hooks/use-auth-protection";
 
-export default function SellerDashboard() {
+function SellerDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const authProtection = useAuthProtection({ requiredRole: 'seller' });
@@ -1144,5 +1144,25 @@ export default function SellerDashboard() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SellerDashboard() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background-primary text-text-primary">
+        <Header />
+        <div className="container mx-auto px-4 pt-32 pb-16">
+          <div className="flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-text-primary mx-auto mb-4"></div>
+              <p className="text-text-muted">Loading seller dashboard...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <SellerDashboardContent />
+    </Suspense>
   );
 } 
